@@ -3,28 +3,32 @@ import json
 import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# def fake_data_streamer():
-#     for i in range(10):
-#         yield f"some fake data{i}\n\n"
-#         time.sleep(1)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True, # cookie 포함 여부를 설정한다. 기본은 False
+    allow_methods=["*"],    # 허용할 method를 설정할 수 있으며, 기본값은 'GET'이다.
+    allow_headers=["*"],	# 허용할 http header 목록을 설정할 수 있으며 Content-Type, Accept, Accept-Language, Content-Language은 항상 허용된다.
+)
 
 def fake_data_json():
     output = next(fake_dummy_data8())
-    ret = {"text": output}
+    ret = {"type": type, "text": output}
     outputJson = json.dumps(ret)
     yield f"{outputJson}"
 
-def fake_data_streamer():
+def fake_data_streamer(type):
     func_name = "fake_dummy_data"
     for i in range(7):
         call_func = func_name + str(i+1)
         output = next(globals()[call_func]())
-        ret = {"text": output}
+        ret = {"type": type, "text": output}
         outputJson = json.dumps(ret)
-        yield f"{outputJson}\n\n"
+        yield f"{outputJson}\n"
         time.sleep(1)
 
 def fake_dummy_data1():
@@ -92,11 +96,13 @@ def hello():
 async def stream(request: Request):
     request_dict = await request.json()
     stream = request_dict.pop("stream", True)
+    type = request_dict.pop("type", "tech")
+
     if stream:
-        return StreamingResponse(fake_data_streamer())
-    else:
-        output = next(fake_dummy_data8())
-        ret = {"text": output}
-        return JSONResponse(ret)
+        return StreamingResponse(fake_data_streamer(type))
+    
+    output = next(fake_dummy_data8())
+    ret = {"type": type, "text": output}
+    return JSONResponse(ret)
 
 
